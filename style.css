@@ -1,7 +1,7 @@
 /* CSS Styling */
 
 main {
-  width: 900px;
+  width: 1000px;
 }
 
 ul {
@@ -10,7 +10,8 @@ ul {
 }
 
 img {
-  width: 200px;
-  height: 200px;
+  width: 320px;
+  height: 240px;
   margin-right: 10px;
+  border: 1px solid black;
 }
