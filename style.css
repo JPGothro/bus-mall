@@ -1,12 +1,24 @@
 /* CSS Styling */
 
 main {
-  width: 1000px;
+  width: 1200px;
+}
+
+h1 {
+  text-align: center;
+  color: rgb(255, 0, 0);
+  font-family: Arial, Verdana, sans-serif;
 }
 
 ul {
   list-style-type: none;
-  display: flex;
+  padding: 0px;
+  width: 1000px;
+  margin: 0 auto;
+}
+
+ul li {
+  display: inline-block;
 }
 
 img {
@@ -14,4 +26,26 @@ img {
   height: 240px;
   margin-right: 10px;
   border: 1px solid black;
+}
+
+.theButton {
+  width: 25%;
+  margin: 0 auto;
+}
+
+#chart_it {
+  /* this is a button */
+  margin-left: 100px;
+  background-color: lightblue;
+  color: black;
+  font-size: 15px;
+  border-radius: 5px;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.visible {
+  visibility: visible;
 }
