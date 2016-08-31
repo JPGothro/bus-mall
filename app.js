@@ -10,6 +10,9 @@ var chartsCreated = false;
 var popularityChart;
 var viewsChart;
 var radarChart;
+var lineChart;
+var localStoreViewsKey = 'totalViewsData';
+var localStoreClicksKey = 'totalClicksData';
 
 // object constructor
 function ProductImage (displayName, fileName) {
@@ -34,6 +37,23 @@ for (var i = 0; i < imageFileNames.length; i++) {
   new ProductImage(shortName[0], 'images/' + fileName);
 }
 
+// retrieve the stored data and populate the counts for each image.
+var storedViewData = [];
+var storedClickData = [];
+
+// call to pull the data from storage.
+console.log('pull the stored data and update our image objects');
+storedViewData = retrieveStoredData(localStoreViewsKey);
+storedClickData = retrieveStoredData(localStoreClicksKey);
+// now update the product image objects
+// if there was no stored data, skip this. Just check one of the arrays for length.
+if (storedViewData.length > 0) {
+  for (var imgInd = 0; imgInd < allImageSet.length; imgInd++) {
+    allImageSet[imgInd].shownCount = storedViewData[imgInd];
+    allImageSet[imgInd].clickCount = storedClickData[imgInd];
+  };
+};
+
 // get the ul element where we will put all the images
 var imageSet = document.getElementById('image_set');
 // get the submit button element
@@ -42,6 +62,7 @@ var chartItBtn = document.getElementById('chart_it');
 var firstChartCtx = document.getElementById('our_Chart');
 var secondChartCtx = document.getElementById('second_Chart');
 var radarChartCtx = document.getElementById('radar_Chart');
+var lineChartCtx = document.getElementById('line_Chart');
 
 // Event Listeners
 imageSet.addEventListener('click', clickHandler);
@@ -52,6 +73,11 @@ var setOfIndices = randomIndices();
 generateImgElement(setOfIndices[0]);
 generateImgElement(setOfIndices[1]);
 generateImgElement(setOfIndices[2]);
+
+
+// ============> just function declarations below here <=========
+
+//========------> Event Handler functions
 
 // clickhandler event for ul
 function clickHandler(event) {
@@ -78,7 +104,6 @@ function clickHandler(event) {
 
   // put the array just displayed into the old one
   oldDisplayArray = currentDisplayArray;
-  console.log('The last set of images:', oldDisplayArray.join());
 
   // we create 3 images for display at one time.
   // clear out the current array so we can load it.
@@ -100,7 +125,21 @@ function buttonClickHandler() {
   } else {
     updateCharts();
   }
+
+  // store the data in local storage.
+  var viewData = [];
+  var clickData = [];
+  for (var imgInd = 0; imgInd < allImageSet.length; imgInd++) {
+    viewData.push(allImageSet[imgInd].shownCount);
+    clickData.push(allImageSet[imgInd].clickCount);
+  }
+  // call to put the data in storage.
+  sendToStorage(localStoreViewsKey, viewData);
+  sendToStorage(localStoreClicksKey, clickData);
+
 };
+
+//========------> Chart functions
 
 function createCharts() {
   // just paste in logic to create the example chart
@@ -112,10 +151,16 @@ function createCharts() {
   var imgNames = [];
   var imgClicks = [];
   var imgViews = [];
+  var pointData = [];
   for (var i = 0; i < allImageSet.length; i++) {
     imgNames.push(allImageSet[i].name);
     imgClicks.push(allImageSet[i].clickCount);
     imgViews.push(allImageSet[i].shownCount);
+    if(allImageSet[i].shownCount === 0) {
+      pointData.push(0);  // just use zero for these points, but they are really undefined.
+    } else {
+      pointData.push((allImageSet[i].clickCount / allImageSet[i].shownCount) * 100);
+    }
   }
   popularityChart = initializeChart(firstChartCtx, 'Popularity', imgNames, imgClicks);
 
@@ -124,6 +169,10 @@ function createCharts() {
 
   // And the radar chart
   radarChart = initializeRadarChart(imgNames, 'Times Displayed', imgViews, 'Popularity', imgClicks);
+
+  // And a line chart
+  lineChart = initializeLineChart( 'Percentage Chosen', imgNames, pointData);
+
 }
 
 function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
@@ -190,7 +239,7 @@ function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
         yAxes: [{
           ticks: {
             beginAtZero: true,
-            stepSize: 1
+            stepSize: 5
           }
         }]
       }
@@ -199,33 +248,6 @@ function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
 
   return new Chart(chartCtx, chartConfigObj);
 };
-
-function updateCharts() {
-  // Get the context
-  // Now update the First chart
-  // firstChartCtx = document.getElementById('our_Chart');
-  // secondChartCtx = document.getElementById('second_Chart');
-
-  //create the data arrays for input.
-  var imgClicks = [];
-  var imgViews = [];
-  for (var i = 0; i < allImageSet.length; i++) {
-    imgClicks.push(allImageSet[i].clickCount);
-    imgViews.push(allImageSet[i].shownCount);
-  }
-  popularityChart.data.datasets[0].data = imgClicks;
-  popularityChart.update();
-
-  // Now do the second chart
-  viewsChart.data.datasets[0].data = imgViews;
-  viewsChart.update();
-
-  // Now the radar chart
-  radarChart.data.datasets[0].data = imgViews;
-  radarChart.data.datasets[1].data = imgClicks;
-  radarChart.update();
-
-}
 
 function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInData2) {
   var radarData = {
@@ -254,7 +276,6 @@ function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInDa
     ]
   };
 
-
   var radarChrtCfg = {
     type: 'radar',
     data: radarData
@@ -263,6 +284,82 @@ function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInDa
   return new Chart(radarChartCtx, radarChrtCfg);
 }
 
+function initializeLineChart(chartName, chartLabels, chartLineData) {
+
+  var lineData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        label: chartName,
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: 'rgba(75,192,192,0.4)',
+        borderColor: 'rgba(75,192,192,1)',
+        borderCapStyle: 'butt',
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: 'miter',
+        pointBorderColor: 'rgba(75,192,192,1)',
+        pointBackgroundColor: '#fff',
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: 'rgba(75,192,192,1)',
+        pointHoverBorderColor: 'rgba(220,220,220,1)',
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: chartLineData,
+        spanGaps: false,
+      }
+    ]
+  };
+
+  var lineChartCfg =  {
+    type: 'line',
+    data: lineData
+  };
+
+  return new Chart(lineChartCtx, lineChartCfg);
+}
+
+function updateCharts() {
+  // Get the context
+  // Now update the First chart
+  // firstChartCtx = document.getElementById('our_Chart');
+  // secondChartCtx = document.getElementById('second_Chart');
+
+  //create the data arrays for input.
+  var imgClicks = [];
+  var imgViews = [];
+  var pointData = [];
+  for (var i = 0; i < allImageSet.length; i++) {
+    imgClicks.push(allImageSet[i].clickCount);
+    imgViews.push(allImageSet[i].shownCount);
+    if(allImageSet[i].shownCount === 0) {
+      pointData.push(0);  // just use zero for these points, but they are really undefined.
+    } else {
+      pointData.push((allImageSet[i].clickCount / allImageSet[i].shownCount) * 100);
+    }
+  }
+  popularityChart.data.datasets[0].data = imgClicks;
+  popularityChart.update();
+
+  // Now do the second chart
+  viewsChart.data.datasets[0].data = imgViews;
+  viewsChart.update();
+
+  // Now the radar chart
+  radarChart.data.datasets[0].data = imgViews;
+  radarChart.data.datasets[1].data = imgClicks;
+  radarChart.update();
+
+  // And the line chart
+  lineChart.data.datasets[0].data = pointData;
+  lineChart.update();
+
+}
+
+//========------> Random number/index selection, image generation functions
 
 function getRandomIndex () {
   return Math.floor(Math.random() * imageFileNames.length);
@@ -326,4 +423,39 @@ function generateImgElement(imgIndex) {
   // add to the DOM
   li.appendChild(img);
   imageSet.appendChild(li);
+}
+
+//========------> Local Storage functions
+
+function sendToStorage (keyToUse, data) {
+  // controller fcn for putting data into Storage
+  var stringToStore = createStorableData(data);
+
+  localStorage.setItem(keyToUse, stringToStore);
+
+}
+
+function createStorableData (inputToStore) {
+  // do the JSON parsing to a string here
+  var parsedData = JSON.stringify(inputToStore);
+  return parsedData;
+}
+
+function retrieveStoredData (keyToUse) {    // eslint-disable-line
+  // controller that will return the stored data
+  var dataThatWasStored = localStorage.getItem(keyToUse);
+
+  var cleanData = [];
+  // check to make sure we have data or not
+  if (dataThatWasStored !== null) {
+    cleanData = parseStoredData(dataThatWasStored);
+  }
+
+  return cleanData;
+}
+
+function parseStoredData (stringToParse) {
+  // takes the data pulled from local storage and sends it to JSON for parsing.
+  var normalData = JSON.parse(stringToParse);
+  return normalData;
 }
