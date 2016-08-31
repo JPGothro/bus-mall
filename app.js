@@ -10,6 +10,8 @@ var chartsCreated = false;
 var popularityChart;
 var viewsChart;
 var radarChart;
+var localStoreViewsKey = 'totalViewsData';
+var localStoreClicksKey = 'totalClicksData';
 
 // object constructor
 function ProductImage (displayName, fileName) {
@@ -34,6 +36,23 @@ for (var i = 0; i < imageFileNames.length; i++) {
   new ProductImage(shortName[0], 'images/' + fileName);
 }
 
+// retrieve the stored data and populate the counts for each image.
+var storedViewData = [];
+var storedClickData = [];
+
+// call to pull the data from storage.
+console.log('pull the stored data and update our image objects');
+storedViewData = retrieveStoredData(localStoreViewsKey);
+storedClickData = retrieveStoredData(localStoreClicksKey);
+// now update the product image objects
+// if there was no stored data, skip this. Just check one of the arrays for length.
+if (storedViewData.length > 0) {
+  for (var imgInd = 0; imgInd < allImageSet.length; imgInd++) {
+    allImageSet[imgInd].shownCount = storedViewData[imgInd];
+    allImageSet[imgInd].clickCount = storedClickData[imgInd];
+  };
+};
+
 // get the ul element where we will put all the images
 var imageSet = document.getElementById('image_set');
 // get the submit button element
@@ -52,6 +71,11 @@ var setOfIndices = randomIndices();
 generateImgElement(setOfIndices[0]);
 generateImgElement(setOfIndices[1]);
 generateImgElement(setOfIndices[2]);
+
+
+// ============> just function declarations below here <=========
+
+//========------> Event Handler functions
 
 // clickhandler event for ul
 function clickHandler(event) {
@@ -78,7 +102,6 @@ function clickHandler(event) {
 
   // put the array just displayed into the old one
   oldDisplayArray = currentDisplayArray;
-  console.log('The last set of images:', oldDisplayArray.join());
 
   // we create 3 images for display at one time.
   // clear out the current array so we can load it.
@@ -100,7 +123,21 @@ function buttonClickHandler() {
   } else {
     updateCharts();
   }
+
+  // store the data in local storage.
+  var viewData = [];
+  var clickData = [];
+  for (var imgInd = 0; imgInd < allImageSet.length; imgInd++) {
+    viewData.push(allImageSet[imgInd].shownCount);
+    clickData.push(allImageSet[imgInd].clickCount);
+  }
+  // call to put the data in storage.
+  sendToStorage(localStoreViewsKey, viewData);
+  sendToStorage(localStoreClicksKey, clickData);
+
 };
+
+//========------> Chart functions
 
 function createCharts() {
   // just paste in logic to create the example chart
@@ -263,6 +300,7 @@ function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInDa
   return new Chart(radarChartCtx, radarChrtCfg);
 }
 
+//========------> Random number/index selection, image generation functions
 
 function getRandomIndex () {
   return Math.floor(Math.random() * imageFileNames.length);
@@ -326,4 +364,39 @@ function generateImgElement(imgIndex) {
   // add to the DOM
   li.appendChild(img);
   imageSet.appendChild(li);
+}
+
+//========------> Local Storage functions
+
+function sendToStorage (keyToUse, data) {
+  // controller fcn for putting data into Storage
+  var stringToStore = createStorableData(data);
+
+  localStorage.setItem(keyToUse, stringToStore);
+
+}
+
+function createStorableData (inputToStore) {
+  // do the JSON parsing to a string here
+  var parsedData = JSON.stringify(inputToStore);
+  return parsedData;
+}
+
+function retrieveStoredData (keyToUse) {    // eslint-disable-line
+  // controller that will return the stored data
+  var dataThatWasStored = localStorage.getItem(keyToUse);
+
+  var cleanData = [];
+  // check to make sure we have data or not
+  if (dataThatWasStored !== null) {
+    cleanData = parseStoredData(dataThatWasStored);
+  }
+
+  return cleanData;
+}
+
+function parseStoredData (stringToParse) {
+  // takes the data pulled from local storage and sends it to JSON for parsing.
+  var normalData = JSON.parse(stringToParse);
+  return normalData;
 }
