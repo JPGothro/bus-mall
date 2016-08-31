@@ -49,3 +49,9 @@ img {
 .visible {
   visibility: visible;
 }
+
+/*  Charts */
+.chart_holder {
+  width: 800px;
+  margin: auto;
+}
