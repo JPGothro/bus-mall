@@ -10,6 +10,7 @@ var chartsCreated = false;
 var popularityChart;
 var viewsChart;
 var radarChart;
+var lineChart;
 var localStoreViewsKey = 'totalViewsData';
 var localStoreClicksKey = 'totalClicksData';
 
@@ -61,6 +62,7 @@ var chartItBtn = document.getElementById('chart_it');
 var firstChartCtx = document.getElementById('our_Chart');
 var secondChartCtx = document.getElementById('second_Chart');
 var radarChartCtx = document.getElementById('radar_Chart');
+var lineChartCtx = document.getElementById('line_Chart');
 
 // Event Listeners
 imageSet.addEventListener('click', clickHandler);
@@ -149,10 +151,16 @@ function createCharts() {
   var imgNames = [];
   var imgClicks = [];
   var imgViews = [];
+  var pointData = [];
   for (var i = 0; i < allImageSet.length; i++) {
     imgNames.push(allImageSet[i].name);
     imgClicks.push(allImageSet[i].clickCount);
     imgViews.push(allImageSet[i].shownCount);
+    if(allImageSet[i].shownCount === 0) {
+      pointData.push(0);  // just use zero for these points, but they are really undefined.
+    } else {
+      pointData.push((allImageSet[i].clickCount / allImageSet[i].shownCount) * 100);
+    }
   }
   popularityChart = initializeChart(firstChartCtx, 'Popularity', imgNames, imgClicks);
 
@@ -161,6 +169,10 @@ function createCharts() {
 
   // And the radar chart
   radarChart = initializeRadarChart(imgNames, 'Times Displayed', imgViews, 'Popularity', imgClicks);
+
+  // And a line chart
+  lineChart = initializeLineChart( 'Percentage Chosen', imgNames, pointData);
+
 }
 
 function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
@@ -227,7 +239,7 @@ function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
         yAxes: [{
           ticks: {
             beginAtZero: true,
-            stepSize: 1
+            stepSize: 5
           }
         }]
       }
@@ -236,33 +248,6 @@ function initializeChart(chartCtx, chartTitle, labelData, dataValues) {
 
   return new Chart(chartCtx, chartConfigObj);
 };
-
-function updateCharts() {
-  // Get the context
-  // Now update the First chart
-  // firstChartCtx = document.getElementById('our_Chart');
-  // secondChartCtx = document.getElementById('second_Chart');
-
-  //create the data arrays for input.
-  var imgClicks = [];
-  var imgViews = [];
-  for (var i = 0; i < allImageSet.length; i++) {
-    imgClicks.push(allImageSet[i].clickCount);
-    imgViews.push(allImageSet[i].shownCount);
-  }
-  popularityChart.data.datasets[0].data = imgClicks;
-  popularityChart.update();
-
-  // Now do the second chart
-  viewsChart.data.datasets[0].data = imgViews;
-  viewsChart.update();
-
-  // Now the radar chart
-  radarChart.data.datasets[0].data = imgViews;
-  radarChart.data.datasets[1].data = imgClicks;
-  radarChart.update();
-
-}
 
 function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInData2) {
   var radarData = {
@@ -291,13 +276,87 @@ function initializeRadarChart(pointLabels, dsLabel1, dsInData1, dsLabel2, dsInDa
     ]
   };
 
-
   var radarChrtCfg = {
     type: 'radar',
     data: radarData
   };
 
   return new Chart(radarChartCtx, radarChrtCfg);
+}
+
+function initializeLineChart(chartName, chartLabels, chartLineData) {
+
+  var lineData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        label: chartName,
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: 'rgba(75,192,192,0.4)',
+        borderColor: 'rgba(75,192,192,1)',
+        borderCapStyle: 'butt',
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: 'miter',
+        pointBorderColor: 'rgba(75,192,192,1)',
+        pointBackgroundColor: '#fff',
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: 'rgba(75,192,192,1)',
+        pointHoverBorderColor: 'rgba(220,220,220,1)',
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: chartLineData,
+        spanGaps: false,
+      }
+    ]
+  };
+
+  var lineChartCfg =  {
+    type: 'line',
+    data: lineData
+  };
+
+  return new Chart(lineChartCtx, lineChartCfg);
+}
+
+function updateCharts() {
+  // Get the context
+  // Now update the First chart
+  // firstChartCtx = document.getElementById('our_Chart');
+  // secondChartCtx = document.getElementById('second_Chart');
+
+  //create the data arrays for input.
+  var imgClicks = [];
+  var imgViews = [];
+  var pointData = [];
+  for (var i = 0; i < allImageSet.length; i++) {
+    imgClicks.push(allImageSet[i].clickCount);
+    imgViews.push(allImageSet[i].shownCount);
+    if(allImageSet[i].shownCount === 0) {
+      pointData.push(0);  // just use zero for these points, but they are really undefined.
+    } else {
+      pointData.push((allImageSet[i].clickCount / allImageSet[i].shownCount) * 100);
+    }
+  }
+  popularityChart.data.datasets[0].data = imgClicks;
+  popularityChart.update();
+
+  // Now do the second chart
+  viewsChart.data.datasets[0].data = imgViews;
+  viewsChart.update();
+
+  // Now the radar chart
+  radarChart.data.datasets[0].data = imgViews;
+  radarChart.data.datasets[1].data = imgClicks;
+  radarChart.update();
+
+  // And the line chart
+  lineChart.data.datasets[0].data = pointData;
+  lineChart.update();
+
 }
 
 //========------> Random number/index selection, image generation functions
